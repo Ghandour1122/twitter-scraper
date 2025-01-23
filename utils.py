@@ -49,7 +49,7 @@ def get_last_10_tweets(id, headers, count=10):
     
     tweets, tweet_ids = [], []
     instructions = response["result"]["timeline"]["instructions"]
-    
+    i=0
     for instruction in instructions:
         if instruction["type"] == "TimelineAddEntries":
             for entry in instruction["entries"]:
@@ -69,7 +69,9 @@ def get_last_10_tweets(id, headers, count=10):
                             "is_quote": legacy_data.get("is_quote_status", False)
                         })
                         tweet_ids.append(legacy_data["id_str"])
-    
+        if i>=10 :
+            break
+        i+=1
     return tweets, tweet_ids
 
 def fetch_all_retweeters(tweet_id, headers, folder):
