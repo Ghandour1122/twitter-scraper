@@ -19,7 +19,6 @@ HEADERS = {
     'x-rapidapi-host': "twitter241.p.rapidapi.com"
 }
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -114,6 +113,14 @@ def generate_scraping_log(user_input):
             # Stream progress
             yield f"data: {json.dumps(log_entries[-1])}\n\n"
         
+        # Combine all data into a single file
+        combined_file = combine_all_data(folder, username or tweet_ids[0])
+        if combined_file:
+            log_entries.append({
+                "status": "info",
+                "message": f"Combined all data into {combined_file}"
+            })
+            yield f"data: {json.dumps(log_entries[-1])}\n\n"
         # Find CSV files
         csv_files = [
             f for f in os.listdir(folder) 
@@ -130,24 +137,8 @@ def generate_scraping_log(user_input):
         })
         
         yield f"data: {json.dumps(log_entries[-1])}\n\n"
-        # Combine all data into a single file
-        combined_file = combine_all_data(folder, username or tweet_ids[0])
-        if combined_file:
-            log_entries.append({
-                "status": "info",
-                "message": f"Combined all data into {combined_file}"
-            })
-            yield f"data: {json.dumps(log_entries[-1])}\n\n"
-
-        # Final log entry
-        log_entries.append({
-            "status": "complete", 
-            "message": f"Scraping complete. Generated {len(output_files)} CSV files",
-            "output_files": combined_file,
-            "total_retweeters": len(all_retweeters),
-            "retweeters": all_retweeters
-        })
-        yield f"data: {json.dumps(log_entries[-1])}\n\n"
+        
+        
     
     except Exception as e:
         error_entry = {"status": "error", "message": str(e)}
