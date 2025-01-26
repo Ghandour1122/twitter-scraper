@@ -14,7 +14,7 @@
 </head>
 <body>
     <div class="container mt-5">
-         <!-- Back to Main Page Button -->
+        <!-- Back to Main Page Button -->
         <button id="back-to-main" class="btn btn-secondary mb-3">Back to Main Page</button>
         <h1>Scraping Progress</h1>
         
@@ -63,7 +63,16 @@
                         data.output_files.forEach(file => {
                             const link = document.createElement('a');
                             link.href = `/download/${file}`;
-                            link.className = 'btn btn-primary m-1';
+                            
+                            // Check if the file starts with "combined"
+                            if (file.includes('combined_all')) {
+                                link.className = 'btn btn-danger m-1'; // Red button
+                            } else if (file.includes('combined')) {
+                                link.className = 'btn btn-success m-1'; // Green button
+                            } else {
+                                link.className = 'btn btn-primary m-1'; // Blue button
+                            }
+                                                        
                             link.textContent = `Download ${file.split('/').pop()}`;
                             fileLinksContainer.appendChild(link);
                         });
@@ -81,8 +90,9 @@
             console.error('EventSource failed:', error);
             eventSource.close();
         };
-         // Add event listener for the back button
-         document.getElementById('back-to-main').addEventListener('click', function() {
+
+        // Add event listener for the back button
+        document.getElementById('back-to-main').addEventListener('click', function() {
             window.location.href = '/'; // Replace '/' with your main page URL
         });
     </script>

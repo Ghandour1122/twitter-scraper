@@ -19,6 +19,7 @@ HEADERS = {
     'x-rapidapi-host': "twitter241.p.rapidapi.com"
 }
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -142,7 +143,7 @@ def generate_scraping_log(user_input):
         log_entries.append({
             "status": "complete", 
             "message": f"Scraping complete. Generated {len(output_files)} CSV files",
-            "output_files": output_files,
+            "output_files": combined_file,
             "total_retweeters": len(all_retweeters),
             "retweeters": all_retweeters
         })
