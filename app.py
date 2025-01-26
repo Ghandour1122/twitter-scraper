@@ -3,7 +3,10 @@ from utils import (
     get_user_or_tweet_data, 
     get_rest_id, 
     get_last_10_tweets, 
-    process_retweeters
+    process_retweeters,
+    process_quotes,
+    process_comments,
+    combine_all_data
 )
 import os
 import json
@@ -79,11 +82,41 @@ def generate_scraping_log(user_input):
             
             # Stream progress
             yield f"data: {json.dumps(log_entries[-1])}\n\n"
+            log_entries.append({"status": "info", "message": f"Fetching comments for tweet: {tweet_id}"})
+            
+            # Process retweeters
+            output_file_commenters, commenters = process_comments(tweet_id, username, HEADERS)
+            
+            log_entries.append({
+                "status": "info", 
+                "message": f"Found {len(commenters)} commeters for tweet {tweet_id}",
+                "output_file": output_file_commenters
+            })
+            
+            all_retweeters.extend(commenters)
+            
+            # Stream progress
+            yield f"data: {json.dumps(log_entries[-1])}\n\n"
+            log_entries.append({"status": "info", "message": f"Fetching quoters for tweet: {tweet_id}"})
+            
+            # Process retweeters
+            output_file_quoters, quoters = process_quotes(tweet_id, username, HEADERS)
+            
+            log_entries.append({
+                "status": "info", 
+                "message": f"Found {len(quoters)} quoters for tweet {tweet_id}",
+                "output_file": output_file_quoters
+            })
+            
+            all_retweeters.extend(quoters)
+            
+            # Stream progress
+            yield f"data: {json.dumps(log_entries[-1])}\n\n"
         
         # Find CSV files
         csv_files = [
             f for f in os.listdir(folder) 
-            if f.startswith(('tweet_', 'combined')) and f.endswith('.csv')
+            if f.startswith(('tweet', 'combined')) and f.endswith('.csv')
         ]
         output_files = [os.path.join(folder, f) for f in csv_files]
         
@@ -95,6 +128,24 @@ def generate_scraping_log(user_input):
             "retwitters":all_retweeters
         })
         
+        yield f"data: {json.dumps(log_entries[-1])}\n\n"
+        # Combine all data into a single file
+        combined_file = combine_all_data(folder, username or tweet_ids[0])
+        if combined_file:
+            log_entries.append({
+                "status": "info",
+                "message": f"Combined all data into {combined_file}"
+            })
+            yield f"data: {json.dumps(log_entries[-1])}\n\n"
+
+        # Final log entry
+        log_entries.append({
+            "status": "complete", 
+            "message": f"Scraping complete. Generated {len(output_files)} CSV files",
+            "output_files": output_files,
+            "total_retweeters": len(all_retweeters),
+            "retweeters": all_retweeters
+        })
         yield f"data: {json.dumps(log_entries[-1])}\n\n"
     
     except Exception as e:
