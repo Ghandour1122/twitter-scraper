@@ -4,12 +4,13 @@ from utils import (
     get_rest_id, 
     get_last_10_tweets, 
     process_retweeters,
-    process_quotes,
-    process_comments,
-    combine_all_data
+    # process_quotes,
+    # process_comments,
+    # combine_all_data
 )
 import os
 import json
+import time
 
 app = Flask(__name__)
 
@@ -66,61 +67,30 @@ def generate_scraping_log(user_input):
         
         # Process each tweet
         all_retweeters = []
+        i=0
         for tweet_id in tweet_ids:
+            if i >=10 :
+                break
             log_entries.append({"status": "info", "message": f"Fetching retweeters for tweet: {tweet_id}"})
             
             # Process retweeters
-            output_file, retweeters = process_retweeters(tweet_id, username, HEADERS)
-            
-            log_entries.append({
+            try:
+             output_file, retweeters = process_retweeters(tweet_id, username, HEADERS)
+                      
+             log_entries.append({
                 "status": "info", 
                 "message": f"Found {len(retweeters)} retweeters for tweet {tweet_id}",
                 "output_file": output_file
             })
             
-            all_retweeters.extend(retweeters)
+             all_retweeters.extend(retweeters)
             
             # Stream progress
-            yield f"data: {json.dumps(log_entries[-1])}\n\n"
-            log_entries.append({"status": "info", "message": f"Fetching comments for tweet: {tweet_id}"})
-            
-            # Process retweeters
-            output_file_commenters, commenters = process_comments(tweet_id, username, HEADERS)
-            
-            log_entries.append({
-                "status": "info", 
-                "message": f"Found {len(commenters)} commeters for tweet {tweet_id}",
-                "output_file": output_file_commenters
-            })
-            
-            all_retweeters.extend(commenters)
-            
-            # Stream progress
-            yield f"data: {json.dumps(log_entries[-1])}\n\n"
-            log_entries.append({"status": "info", "message": f"Fetching quoters for tweet: {tweet_id}"})
-            
-            # Process retweeters
-            output_file_quoters, quoters = process_quotes(tweet_id, username, HEADERS)
-            
-            log_entries.append({
-                "status": "info", 
-                "message": f"Found {len(quoters)} quoters for tweet {tweet_id}",
-                "output_file": output_file_quoters
-            })
-            
-            all_retweeters.extend(quoters)
-            
-            # Stream progress
-            yield f"data: {json.dumps(log_entries[-1])}\n\n"
-        
-        # Combine all data into a single file
-        combined_file = combine_all_data(folder, username or tweet_ids[0])
-        if combined_file:
-            log_entries.append({
-                "status": "info",
-                "message": f"Combined all data into {combined_file}"
-            })
-            yield f"data: {json.dumps(log_entries[-1])}\n\n"
+             yield f"data: {json.dumps(log_entries[-1])}\n\n"
+            except Exception as e:
+                print(e)
+            i+=1
+            time.sleep(5)
         # Find CSV files
         csv_files = [
             f for f in os.listdir(folder) 
@@ -137,6 +107,7 @@ def generate_scraping_log(user_input):
         })
         
         yield f"data: {json.dumps(log_entries[-1])}\n\n"
+
         
         
     
