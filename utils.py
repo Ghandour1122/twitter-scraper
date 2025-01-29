@@ -9,6 +9,37 @@ import requests
 import time
 import zstandard as zstd
 import io
+import binascii
+import gzip               # For gzip decompression
+
+def handle_compressed_response(response,logger):
+    """Handle potentially mislabeled zstd compression"""
+    # Check magic number for actual zstd compression
+    zstd_magic = b'\x28\xb5\x2f\xfd'
+    content = response.content
+    
+    try:
+        # First check if it's valid JSON despite zstd header
+        try:
+            return json.loads(content.decode('utf-8'))
+        except UnicodeDecodeError:
+            pass
+            
+        # Verify zstd compression
+        if content.startswith(zstd_magic):
+            dctx = zstd.ZstdDecompressor()
+            return json.loads(dctx.decompress(content))
+            
+        # Check for gzip fallback
+        if content[:2] == b'\x1f\x8b':  # gzip magic number
+            return json.loads(gzip.decompress(content))
+            
+        # Final fallback attempt
+        return json.loads(content.decode('utf-8', errors='replace'))
+        
+    except Exception as e:
+        logger.info(f"Raw content (hex): {binascii.hexlify(content[:8])}")
+        raise ValueError(f"Failed to decode response: {e}")
 
 
 def extract_tweet_id(url):
@@ -186,22 +217,25 @@ def fetch_all_retweeters(tweet_id,folder,logger):
                 logger.info("Processing JSON response.")
                 logger.info(f"Response Text: {response.text[:500]}")  # Log first 500 characters for infoging
                 # Check if the response is compressed with zstd
-                if 'content-encoding' in response.headers and response.headers['content-encoding'] == 'zstd':
-                    # Decompress the response
-                    dctx = zstd.ZstdDecompressor()
-                    buf = io.BytesIO(response.content)
-                    decompressed_data = dctx.decompress(buf.read()).decode('utf-8')
-                    response_text = decompressed_data
-                else:
-                    response_text = response.text  # Standard response if not compressed
-
-                response = json.loads(response_text)
+                # Check for zstd compression
+                response_text = response.text
+                # Add this to see the actual content structure
+                logger.info(f"First 8 bytes (hex): {binascii.hexlify(response.content[:8])}")
+                try:
+                        response_text = handle_compressed_response(response,logger)
+                        # Process response_data here
+                except Exception as e:
+                        logger.error(f"Final decoding failed: {e}")
+                        logger.error(f"First 16 bytes (hex): {binascii.hexlify(response.content[:16])}")
+                        return []
+                response = response_text
+                logger.info(response_text)
                 logger.info("Successfully parsed JSON response.")
 
                 instructions = response["data"]["retweeters_timeline"]["timeline"]["instructions"]
                 valid_entries = 0
                 logger.info(f"Instructions: {instructions}")
-
+                break
                 for instruction in instructions:
                     if instruction["type"] == "TimelineAddEntries":
                         for entry in instruction["entries"]:
@@ -532,3 +566,14 @@ def process_retweeters(tweet_id, username, headers,logger):
 #             print(f"Error combining data: {e}")
 #             return None
 #     return None
+
+
+# Response Text: (�/��^-���aT��l�(�L�*�Ê�(:TA��A" �y+��i�e�����]Mvs�	�m2!�tߏ�7�PR|$��פ�2%���
+# ��#AA�>��n�8�ap%�Ո6�H�%#>N����H��	�'LSP�"aG����s�	�7MT=�
+# /k��o������g�d��*ga���¹nd��iW�Q[uA��x�E7�N�p
+# �0��&�S���d����;~|��q�{|RhC�_J%�8�o��)�tvze�6���W,�6�
+# �E�\�CU#MˀQ����Y�`��C��nIs	�PW7���o��My�7
+# R�h8JB,��eJ���cc/?��'�{�P��m����Bԑ����>�Ȱ�����D���ʃ����*���4�n2<l8|T.6�D��pX6"���&C#r��=e��sT��J�%��y4Y8N����7N��~��Yn��/ʷɜ<.O7�$�f��'|�>>�������.�TeXs��T@��`�Q��DT�
+# 2025-01-29 19:07:20 - ERROR - Failed to parse JSON: Expecting value: line 1 column 1 (char 0)
+# Traceback (most recent call last):
+
