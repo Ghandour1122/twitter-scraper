@@ -177,57 +177,87 @@ def fetch_all_retweeters(tweet_id,folder,logger):
         print(f"Status Code:{response.status_code}")
         logger.info(f"Status Code:{response.status_code}")
         if "application/json" in response.headers.get("Content-Type", ""):
-         response = json.loads(response.text)
-         # Parse retweeters from the current response
-         instructions = response["data"]["retweeters_timeline"]["timeline"]["instructions"]
-         valid_entries = 0
-         for instruction in instructions:
-            if instruction["type"] == "TimelineAddEntries":
-                for entry in instruction["entries"]:
-                    if "itemContent" in entry["content"] and "user_results" in entry["content"]["itemContent"]:
-                        try:
-                            user_data = entry["content"]["itemContent"]["user_results"]["result"]
-                            legacy_data = user_data["legacy"]
-                            user_id = user_data["rest_id"]
-                            
-                            if user_id in user_ids:
-                                continue
-                            
-                            user_ids.add(user_id)
-                            all_retweeters.append({
-                                "username": legacy_data["screen_name"],
-                                "name": legacy_data["name"],
-                                "id": user_id,
-                                "followers_count": legacy_data["followers_count"]
-                            })
-                            valid_entries += 1
-                            print(legacy_data["screen_name"], legacy_data["name"], legacy_data["followers_count"])
-                            
-                            if int(legacy_data["followers_count"]) >= 800:
-                                file_path = os.path.join(folder, f"tweet_{tweet_id}_data.csv")
-                                file_exists = os.path.isfile(file_path)
-                                with open(file_path, 'a', encoding="utf-8", newline="") as append_file:
-                                    append_writer = csv.DictWriter(append_file, fieldnames=["username", "name", "id", "followers_count"])
-                                    if not file_exists:
-                                                append_writer.writeheader()
-                                    append_writer.writerow({
+            try:
+                logger.info("Processing JSON response.")
+                logger.debug(f"Response Text: {response.text[:500]}")  # Log first 500 characters for debugging
+
+                response = json.loads(response.text)
+                logger.info("Successfully parsed JSON response.")
+
+                instructions = response["data"]["retweeters_timeline"]["timeline"]["instructions"]
+                valid_entries = 0
+                logger.debug(f"Instructions: {instructions}")
+
+                for instruction in instructions:
+                    if instruction["type"] == "TimelineAddEntries":
+                        for entry in instruction["entries"]:
+                            logger.debug(f"Processing Entry: {entry}")
+
+                            if "itemContent" in entry["content"] and "user_results" in entry["content"]["itemContent"]:
+                                try:
+                                    user_data = entry["content"]["itemContent"]["user_results"]["result"]
+                                    legacy_data = user_data["legacy"]
+                                    user_id = user_data["rest_id"]
+
+                                    logger.info(f"Processing user: {legacy_data['screen_name']} ({user_id})")
+
+                                    if user_id in user_ids:
+                                        logger.debug(f"User {user_id} already processed, skipping.")
+                                        continue
+
+                                    user_ids.add(user_id)
+                                    all_retweeters.append({
                                         "username": legacy_data["screen_name"],
                                         "name": legacy_data["name"],
                                         "id": user_id,
                                         "followers_count": legacy_data["followers_count"]
                                     })
-                        except KeyError as e:
-                            print(f"Error processing user: {e}")
-                        i += 1
+                                    valid_entries += 1
+                                    logger.info(f"Added user: {legacy_data['screen_name']} - Followers: {legacy_data['followers_count']}")
 
-         # Check if there's a next cursor for pagination
-         next_cursor = None
-         for instruction in instructions:
-            if instruction["type"] == "TimelineAddEntries":
-                for entry in instruction["entries"]:
-                    if entry["content"]["entryType"] == "TimelineTimelineCursor" and entry["content"].get("cursorType") == "Bottom":
-                        next_cursor = entry["content"]["value"]
+                                    if int(legacy_data["followers_count"]) >= 800:
+                                        file_path = os.path.join(folder, f"tweet_{tweet_id}_data.csv")
+                                        file_exists = os.path.isfile(file_path)
+                                        
+                                        with open(file_path, 'a', encoding="utf-8", newline="") as append_file:
+                                            append_writer = csv.DictWriter(append_file, fieldnames=["username", "name", "id", "followers_count"])
+                                            
+                                            if not file_exists:
+                                                append_writer.writeheader()
+                                            
+                                            append_writer.writerow({
+                                                "username": legacy_data["screen_name"],
+                                                "name": legacy_data["name"],
+                                                "id": user_id,
+                                                "followers_count": legacy_data["followers_count"]
+                                            })
+                                        
+                                        logger.info(f"User {legacy_data['screen_name']} saved to CSV.")
 
+                                except KeyError as e:
+                                    logger.error(f"Error processing user: {e}", exc_info=True)
+                                i += 1
+
+                # Check if there's a next cursor for pagination
+                next_cursor = None
+                for instruction in instructions:
+                    if instruction["type"] == "TimelineAddEntries":
+                        for entry in instruction["entries"]:
+                            if entry["content"]["entryType"] == "TimelineTimelineCursor" and entry["content"].get("cursorType") == "Bottom":
+                                next_cursor = entry["content"]["value"]
+                                logger.info(f"Next cursor found: {next_cursor}")
+
+                # Save the response if there's no next cursor
+                if not next_cursor or valid_entries == 0:
+                    logger.warning("No next cursor or no valid entries found.")
+                    break
+
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON: {e}", exc_info=True)
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}", exc_info=True)
+
+<<<<<<< HEAD
          # Save the response if there's no next cursor
          if not next_cursor or valid_entries == 0:
             # with open(f"tweet_{tweet_id}_last_response.json", "w") as debug_file:
@@ -235,7 +265,10 @@ def fetch_all_retweeters(tweet_id,folder,logger):
             print(f"No next cursor or no valid entries found.")
             logger.info("No next cursor or no valid entries found.")
             break
+=======
+>>>>>>> 871bef0 (lasst logger)
         time.sleep(1)
+
 
     return all_retweeters
 
