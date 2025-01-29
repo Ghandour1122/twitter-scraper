@@ -257,16 +257,6 @@ def fetch_all_retweeters(tweet_id,folder,logger):
             except Exception as e:
                 logger.error(f"Unexpected error: {e}", exc_info=True)
 
-<<<<<<< HEAD
-         # Save the response if there's no next cursor
-         if not next_cursor or valid_entries == 0:
-            # with open(f"tweet_{tweet_id}_last_response.json", "w") as debug_file:
-            #     json.dump(response, debug_file, indent=4)
-            print(f"No next cursor or no valid entries found.")
-            logger.info("No next cursor or no valid entries found.")
-            break
-=======
->>>>>>> 871bef0 (lasst logger)
         time.sleep(1)
 
 
