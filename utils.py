@@ -215,8 +215,6 @@ def fetch_all_retweeters(tweet_id,folder,logger):
         if "application/json" in response.headers.get("Content-Type", ""):
             try:
                 logger.info("Processing JSON response.")
-                logger.info(f"Response Text: {response.text[:500]}")  # Log first 500 characters for infoging
-                # Check if the response is compressed with zstd
                 # Check for zstd compression
                 response_text = response.text
                 # Add this to see the actual content structure
