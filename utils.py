@@ -73,7 +73,7 @@ def get_last_10_tweets(id, headers, count=10):
                         tweet_ids.append(legacy_data["id_str"])
     return tweets, tweet_ids
 
-def fetch_all_retweeters(tweet_id,folder):
+def fetch_all_retweeters(tweet_id,folder,logger):
     # Step 1: Define base URL and endpoint
     BASE_URL = "https://x.com/i/api/graphql"
     ENDPOINT = "8fXdisbSK0JGESmFrHcp1g/Retweeters"
@@ -156,6 +156,7 @@ def fetch_all_retweeters(tweet_id,folder):
     user_ids = set()  # Use a set to avoid duplicates
     while True:
         print(f"Scraped {i} unique users so far.")
+        logger.info(f"Scraped {i} unique users so far.")
         if next_cursor:
            variables=  {
             "tweetId": f"{tweet_id}",
@@ -173,7 +174,8 @@ def fetch_all_retweeters(tweet_id,folder):
         response = requests.get(url, headers=headers)
 
         # Step 7: Check the response
-        print("Status Code:", response.status_code)
+        print(f"Status Code:{response.status_code}")
+        logger.info(f"Status Code:{response.status_code}")
         if "application/json" in response.headers.get("Content-Type", ""):
          response = json.loads(response.text)
          # Parse retweeters from the current response
@@ -231,6 +233,7 @@ def fetch_all_retweeters(tweet_id,folder):
             # with open(f"tweet_{tweet_id}_last_response.json", "w") as debug_file:
             #     json.dump(response, debug_file, indent=4)
             print(f"No next cursor or no valid entries found.")
+            logger.info("No next cursor or no valid entries found.")
             break
         time.sleep(1)
 
@@ -414,11 +417,11 @@ def get_posts_quotes(id,headers,folder,count=20):
     conn.close()
     return tweets, tweet_ids,queters
 
-def process_retweeters(tweet_id, username, headers):
+def process_retweeters(tweet_id, username, headers,logger):
     folder = username or tweet_id
     os.makedirs(folder, exist_ok=True)
     
-    retweeters = fetch_all_retweeters(tweet_id, folder)
+    retweeters = fetch_all_retweeters(tweet_id, folder,logger)
     
     files = [os.path.join(folder, f) for f in os.listdir(folder) if f.startswith('tweet') and f.endswith('.csv')]
     

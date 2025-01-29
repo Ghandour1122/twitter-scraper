@@ -11,6 +11,18 @@ from utils import (
 import os
 import json
 import time
+import logging
+
+# Configure logging to print to the console
+logging.basicConfig(
+    level=logging.INFO,  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
+    datefmt='%Y-%m-%d %H:%M:%S'  # Date format
+)
+
+# Create a logger
+logger = logging.getLogger(__name__)
+
 
 app = Flask(__name__)
 
@@ -19,6 +31,7 @@ HEADERS = {
     'x-rapidapi-key': os.getenv('RAPIDAPI_KEY'),
     'x-rapidapi-host': "twitter241.p.rapidapi.com"
 }
+
 
 @app.route('/')
 def index():
@@ -32,10 +45,12 @@ def generate_scraping_log(user_input):
     try:
         # Identify input type
         log_entries.append({"status": "info", "message": f"Processing input: {user_input}"})
+        logger.info(f"Processing input: {user_input}")
         result = get_user_or_tweet_data(user_input)
         
         if result['type'] == 'invalid_url':
             log_entries.append({"status": "error", "message": "Invalid URL or username"})
+            logger.info("Invalid URL or username")
             yield f"data: {json.dumps({'status': 'error', 'message': 'Invalid URL or username'})}\n\n"
             return
         
@@ -43,19 +58,21 @@ def generate_scraping_log(user_input):
         if result['type'] == 'username':
             username = result['data']
             log_entries.append({"status": "info", "message": f"Fetching data for username: {username}"})
-            
+            logger.info(f"Fetching data for username: {username}")
             # Get REST ID
             rest_id = get_rest_id(username, HEADERS)
             if not rest_id:
                 log_entries.append({"status": "error", "message": "Could not fetch user REST ID"})
+                logger.info("Could not fetch user REST ID")
                 yield f"data: {json.dumps({'status': 'error', 'message': 'Could not fetch user REST ID'})}\n\n"
                 return
             
             log_entries.append({"status": "info", "message": f"Retrieved REST ID: {rest_id}"})
-            
+            logger.info(f"Retrieved REST ID: {rest_id}")
             # Get tweets
             tweets, tweet_ids = get_last_10_tweets(rest_id, HEADERS)
             log_entries.append({"status": "info", "message": f"Found {len(tweets)} tweets"})
+            logger.info(f"Found {len(tweets)} tweets")
         else:
             username = None
             tweet_ids = [result['data']]
@@ -72,11 +89,11 @@ def generate_scraping_log(user_input):
             if i >=10 :
                 break
             log_entries.append({"status": "info", "message": f"Fetching retweeters for tweet: {tweet_id}"})
-            
+            logger.info(f"Fetching retweeters for tweet: {tweet_id}")
             # Process retweeters
             try:
-             output_file, retweeters = process_retweeters(tweet_id, username, HEADERS)
-                      
+             output_file, retweeters = process_retweeters(tweet_id, username, HEADERS,logger)
+             logger.info(f"Found {len(retweeters)} retweeters for tweet {tweet_id}")
              log_entries.append({
                 "status": "info", 
                 "message": f"Found {len(retweeters)} retweeters for tweet {tweet_id}",
