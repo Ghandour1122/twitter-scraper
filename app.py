@@ -27,11 +27,14 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Replace with your actual RapidAPI key
+# HEADERS = {
+#     'x-rapidapi-key': os.getenv('RAPIDAPI_KEY'),
+#     'x-rapidapi-host': "twitter241.p.rapidapi.com"
+# }
 HEADERS = {
-    'x-rapidapi-key': os.getenv('RAPIDAPI_KEY'),
+    'x-rapidapi-key': "3bb17130b6msh51fb37b0ef2dabap11b955jsn812fc2df6bc9",
     'x-rapidapi-host': "twitter241.p.rapidapi.com"
 }
-
 
 @app.route('/')
 def index():

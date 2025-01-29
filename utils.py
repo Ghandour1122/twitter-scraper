@@ -179,19 +179,19 @@ def fetch_all_retweeters(tweet_id,folder,logger):
         if "application/json" in response.headers.get("Content-Type", ""):
             try:
                 logger.info("Processing JSON response.")
-                logger.debug(f"Response Text: {response.text[:500]}")  # Log first 500 characters for debugging
+                logger.info(f"Response Text: {response.text[:500]}")  # Log first 500 characters for infoging
 
                 response = json.loads(response.text)
                 logger.info("Successfully parsed JSON response.")
 
                 instructions = response["data"]["retweeters_timeline"]["timeline"]["instructions"]
                 valid_entries = 0
-                logger.debug(f"Instructions: {instructions}")
+                logger.info(f"Instructions: {instructions}")
 
                 for instruction in instructions:
                     if instruction["type"] == "TimelineAddEntries":
                         for entry in instruction["entries"]:
-                            logger.debug(f"Processing Entry: {entry}")
+                            logger.info(f"Processing Entry: {entry}")
 
                             if "itemContent" in entry["content"] and "user_results" in entry["content"]["itemContent"]:
                                 try:
@@ -202,7 +202,7 @@ def fetch_all_retweeters(tweet_id,folder,logger):
                                     logger.info(f"Processing user: {legacy_data['screen_name']} ({user_id})")
 
                                     if user_id in user_ids:
-                                        logger.debug(f"User {user_id} already processed, skipping.")
+                                        logger.info(f"User {user_id} already processed, skipping.")
                                         continue
 
                                     user_ids.add(user_id)
