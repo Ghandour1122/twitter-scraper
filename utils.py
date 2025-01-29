@@ -229,13 +229,11 @@ def fetch_all_retweeters(tweet_id,folder,logger):
                         logger.error(f"First 16 bytes (hex): {binascii.hexlify(response.content[:16])}")
                         return []
                 response = response_text
-                logger.info(response_text)
                 logger.info("Successfully parsed JSON response.")
 
                 instructions = response["data"]["retweeters_timeline"]["timeline"]["instructions"]
                 valid_entries = 0
                 logger.info(f"Instructions: {instructions}")
-                break
                 for instruction in instructions:
                     if instruction["type"] == "TimelineAddEntries":
                         for entry in instruction["entries"]:
