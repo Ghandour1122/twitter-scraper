@@ -503,73 +503,64 @@ def process_retweeters(tweet_id, username, headers,logger):
     
     return None, retweeters
 
-# def process_comments(tweet_id, username, headers):
-#     folder = username or tweet_id
-#     os.makedirs(folder, exist_ok=True)
+def process_comments(tweet_id, username, headers):
+    folder = username or tweet_id
+    os.makedirs(folder, exist_ok=True)
     
-#     commenters = get_posts_commenters(tweet_id, headers, folder)
+    commenters = get_posts_commenters(tweet_id, headers, folder)
     
-#     files = [os.path.join(folder, f) for f in os.listdir(folder) if f.startswith('tweet_commenters') and f.endswith('.csv')]
+    files = [os.path.join(folder, f) for f in os.listdir(folder) if f.startswith('tweet_commenters') and f.endswith('.csv')]
     
-#     if files:
-#         try:
-#             combined_df = pd.concat([pd.read_csv(file) for file in files], ignore_index=True)
-#             output_file = os.path.join(folder, f"combined_commenters_{username or tweet_id}.csv")
-#             combined_df.to_csv(output_file, index=False)
-#             return output_file, commenters
-#         except Exception:
-#             return None, commenters
+    if files:
+        try:
+            combined_df = pd.concat([pd.read_csv(file) for file in files], ignore_index=True)
+            output_file = os.path.join(folder, f"combined_commenters_{username or tweet_id}.csv")
+            combined_df.to_csv(output_file, index=False)
+            return output_file, commenters
+        except Exception:
+            return None, commenters
     
-#     return None, commenters
+    return None, commenters
 
-# def process_quotes(tweet_id, username, headers):
-#     folder = username or tweet_id
-#     os.makedirs(folder, exist_ok=True)
+def process_quotes(tweet_id, username, headers):
+    folder = username or tweet_id
+    os.makedirs(folder, exist_ok=True)
     
-#     tweets, tweet_ids, quoters = get_posts_quotes(tweet_id, headers, folder)
+    tweets, tweet_ids, quoters = get_posts_quotes(tweet_id, headers, folder)
     
-#     files = [os.path.join(folder, f) for f in os.listdir(folder) if f.startswith('tweet_quoters') and f.endswith('.csv')]
+    files = [os.path.join(folder, f) for f in os.listdir(folder) if f.startswith('tweet_quoters') and f.endswith('.csv')]
     
-#     if files:
-#         try:
-#             combined_df = pd.concat([pd.read_csv(file) for file in files], ignore_index=True)
-#             output_file = os.path.join(folder, f"combined_quoters_{username or tweet_id}.csv")
-#             combined_df.to_csv(output_file, index=False)
-#             return output_file, quoters
-#         except Exception:
-#             return None, quoters
+    if files:
+        try:
+            combined_df = pd.concat([pd.read_csv(file) for file in files], ignore_index=True)
+            output_file = os.path.join(folder, f"combined_quoters_{username or tweet_id}.csv")
+            combined_df.to_csv(output_file, index=False)
+            return output_file, quoters
+        except Exception:
+            return None, quoters
     
-#     return None, quoters
-
-
-# def combine_all_data(folder, username_or_tweet_id):
-#     """Combine retweeters, commenters, and quoters into a single file."""
-#     combined_files = [
-#         os.path.join(folder, f"combined_retweeters_{username_or_tweet_id}.csv"),
-#         os.path.join(folder, f"combined_commenters_{username_or_tweet_id}.csv"),
-#         os.path.join(folder, f"combined_quoters_{username_or_tweet_id}.csv")
-#     ]
-    
-#     if all(os.path.exists(file) for file in combined_files):
-#         try:
-#             combined_df = pd.concat([pd.read_csv(file) for file in combined_files], ignore_index=True)
-#             # Remove duplicates based on 'id'
-#             combined_df.drop_duplicates(subset=['id'], inplace=True)
-#             output_file = os.path.join(folder, f"combined_all_data_{username_or_tweet_id}.csv")
-#             combined_df.to_csv(output_file, index=False)
-#             return output_file
-#         except Exception as e:
-#             print(f"Error combining data: {e}")
-#             return None
-#     return None
+    return None, quoters
 
 
-# Response Text: (�/��^-���aT��l�(�L�*�Ê�(:TA��A" �y+��i�e�����]Mvs�	�m2!�tߏ�7�PR|$��פ�2%���
-# ��#AA�>��n�8�ap%�Ո6�H�%#>N����H��	�'LSP�"aG����s�	�7MT=�
-# /k��o������g�d��*ga���¹nd��iW�Q[uA��x�E7�N�p
-# �0��&�S���d����;~|��q�{|RhC�_J%�8�o��)�tvze�6���W,�6�
-# �E�\�CU#MˀQ����Y�`��C��nIs	�PW7���o��My�7
-# R�h8JB,��eJ���cc/?��'�{�P��m����Bԑ����>�Ȱ�����D���ʃ����*���4�n2<l8|T.6�D��pX6"���&C#r��=e��sT��J�%��y4Y8N����7N��~��Yn��/ʷɜ<.O7�$�f��'|�>>�������.�TeXs��T@��`�Q��DT�
-# 2025-01-29 19:07:20 - ERROR - Failed to parse JSON: Expecting value: line 1 column 1 (char 0)
-# Traceback (most recent call last):
+def combine_all_data(folder, username_or_tweet_id):
+    """Combine retweeters, commenters, and quoters into a single file."""
+    combined_files = [
+        os.path.join(folder, f"combined_retweeters_{username_or_tweet_id}.csv"),
+        os.path.join(folder, f"combined_commenters_{username_or_tweet_id}.csv"),
+        os.path.join(folder, f"combined_quoters_{username_or_tweet_id}.csv")
+    ]
+    
+    if all(os.path.exists(file) for file in combined_files):
+        try:
+            combined_df = pd.concat([pd.read_csv(file) for file in combined_files], ignore_index=True)
+            # Remove duplicates based on 'id'
+            combined_df.drop_duplicates(subset=['id'], inplace=True)
+            output_file = os.path.join(folder, f"combined_all_data_{username_or_tweet_id}.csv")
+            combined_df.to_csv(output_file, index=False)
+            return output_file
+        except Exception as e:
+            print(f"Error combining data: {e}")
+            return None
+    return None
+
 

@@ -4,9 +4,9 @@ from utils import (
     get_rest_id, 
     get_last_10_tweets, 
     process_retweeters,
-    # process_quotes,
-    # process_comments,
-    # combine_all_data
+    process_quotes,
+    process_comments,
+    combine_all_data
 )
 import os
 import json
@@ -27,14 +27,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Replace with your actual RapidAPI key
-# HEADERS = {
-#     'x-rapidapi-key': os.getenv('RAPIDAPI_KEY'),
-#     'x-rapidapi-host': "twitter241.p.rapidapi.com"
-# }
 HEADERS = {
-    'x-rapidapi-key': "3bb17130b6msh51fb37b0ef2dabap11b955jsn812fc2df6bc9",
+    'x-rapidapi-key': os.getenv('RAPIDAPI_KEY'),
     'x-rapidapi-host': "twitter241.p.rapidapi.com"
 }
+
 
 @app.route('/')
 def index():
@@ -95,22 +92,59 @@ def generate_scraping_log(user_input):
             logger.info(f"Fetching retweeters for tweet: {tweet_id}")
             # Process retweeters
             try:
-             output_file, retweeters = process_retweeters(tweet_id, username, HEADERS,logger)
-             logger.info(f"Found {len(retweeters)} retweeters for tweet {tweet_id}")
-             log_entries.append({
-                "status": "info", 
-                "message": f"Found {len(retweeters)} retweeters for tweet {tweet_id}",
-                "output_file": output_file
-            })
+                output_file, retweeters = process_retweeters(tweet_id, username, HEADERS,logger)
+                logger.info(f"Found {len(retweeters)} retweeters for tweet {tweet_id}")
+                log_entries.append({
+                    "status": "info", 
+                    "message": f"Found {len(retweeters)} retweeters for tweet {tweet_id}",
+                    "output_file": output_file
+                })
+                
+                all_retweeters.extend(retweeters)
+                
+                # Stream progress
+                yield f"data: {json.dumps(log_entries[-1])}\n\n"
+                # Process retweeters
+                output_file_commenters, commenters = process_comments(tweet_id, username, HEADERS)
+                
+                log_entries.append({
+                    "status": "info", 
+                    "message": f"Found {len(commenters)} commeters for tweet {tweet_id}",
+                    "output_file": output_file_commenters
+                })
+                
+                all_retweeters.extend(commenters)
+                
+                # Stream progress
+                yield f"data: {json.dumps(log_entries[-1])}\n\n"
+                log_entries.append({"status": "info", "message": f"Fetching quoters for tweet: {tweet_id}"})
+                
+                # Process retweeters
+                output_file_quoters, quoters = process_quotes(tweet_id, username, HEADERS)
+                
+                log_entries.append({
+                    "status": "info", 
+                    "message": f"Found {len(quoters)} quoters for tweet {tweet_id}",
+                    "output_file": output_file_quoters
+                })
+                
+                all_retweeters.extend(quoters)
             
-             all_retweeters.extend(retweeters)
-            
-            # Stream progress
-             yield f"data: {json.dumps(log_entries[-1])}\n\n"
+                   # Stream progress
+                yield f"data: {json.dumps(log_entries[-1])}\n\n"
+        
             except Exception as e:
                 print(e)
             i+=1
             time.sleep(5)
+         # Combine all data into a single file
+        combined_file = combine_all_data(folder, username or tweet_ids[0])
+        if combined_file:
+            log_entries.append({
+                "status": "info",
+                "message": f"Combined all data into {combined_file}"
+            })
+            yield f"data: {json.dumps(log_entries[-1])}\n\n"
         # Find CSV files
         csv_files = [
             f for f in os.listdir(folder) 
