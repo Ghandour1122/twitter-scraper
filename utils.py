@@ -7,6 +7,9 @@ import pandas as pd
 import urllib.parse
 import requests
 import time
+import zstandard as zstd
+import io
+
 
 def extract_tweet_id(url):
     """Extract tweet ID from Twitter/X URL."""
@@ -177,13 +180,22 @@ def fetch_all_retweeters(tweet_id,folder,logger):
         print(f"Status Code:{response.status_code}")
         logger.info(f"Status Code:{response.status_code}")
         logger.info(f"Response Headers: {response.headers}")
-        break
+        
         if "application/json" in response.headers.get("Content-Type", ""):
             try:
                 logger.info("Processing JSON response.")
                 logger.info(f"Response Text: {response.text[:500]}")  # Log first 500 characters for infoging
+                # Check if the response is compressed with zstd
+                if 'content-encoding' in response.headers and response.headers['content-encoding'] == 'zstd':
+                    # Decompress the response
+                    dctx = zstd.ZstdDecompressor()
+                    buf = io.BytesIO(response.content)
+                    decompressed_data = dctx.decompress(buf.read()).decode('utf-8')
+                    response_text = decompressed_data
+                else:
+                    response_text = response.text  # Standard response if not compressed
 
-                response = json.loads(response.text)
+                response = json.loads(response_text)
                 logger.info("Successfully parsed JSON response.")
 
                 instructions = response["data"]["retweeters_timeline"]["timeline"]["instructions"]
