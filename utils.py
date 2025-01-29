@@ -176,6 +176,8 @@ def fetch_all_retweeters(tweet_id,folder,logger):
         # Step 7: Check the response
         print(f"Status Code:{response.status_code}")
         logger.info(f"Status Code:{response.status_code}")
+        logger.info(f"Response Headers: {response.headers}")
+        break
         if "application/json" in response.headers.get("Content-Type", ""):
             try:
                 logger.info("Processing JSON response.")
