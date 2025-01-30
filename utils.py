@@ -601,7 +601,7 @@ def accs_fetcher():
         """
         Securely extract and process account information from Render's Secret File
         """
-        secret_path = os.getenv('ACCOUNTS_SECRET_PATH', '/etc/secrets/twitter_accounts.json')
+        secret_path = os.getenv('ACCOUNTS_SECRET_PATH', '/etc/secrets/twitter_account.json')
         with open(secret_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
 
