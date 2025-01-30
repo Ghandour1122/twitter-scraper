@@ -11,6 +11,7 @@ import zstandard as zstd
 import io
 import binascii
 import gzip               # For gzip decompression
+import random
 
 def handle_compressed_response(response,logger):
     """Handle potentially mislabeled zstd compression"""
@@ -107,7 +108,7 @@ def get_last_10_tweets(id, headers, count=10):
                         tweet_ids.append(legacy_data["id_str"])
     return tweets, tweet_ids
 
-def fetch_all_retweeters(tweet_id,folder,logger):
+def fetch_all_retweeters(tweet_id,folder,logger,formated_cookies,x_csrf_token,x_client_uuid,x_client_transaction_id):
     # Step 1: Define base URL and endpoint
     BASE_URL = "https://x.com/i/api/graphql"
     ENDPOINT = "8fXdisbSK0JGESmFrHcp1g/Retweeters"
@@ -153,15 +154,7 @@ def fetch_all_retweeters(tweet_id,folder,logger):
     "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
     "connection": "keep-alive",
     "content-type": "application/json",
-    "cookie": (
-        "night_mode=2; kdt=eZzLyWD0ZC5PCrziaoiEqnldOmT3v2Oq5effS9bW; des_opt_in=Y; _ga=GA1.2.95762774.1733952377; "
-        "g_state={\"i_l\":0}; personalization_id=\"v1_kIrh4n2QGZaNVXZYGu6eeA==\"; ajs_anonymous_id=%221b2bbdf2-195f-4e4e-bb69-8d946402eea8%22; "
-        "dnt=1; lang=en; auth_multi=\"1476138377237905409:b9b7a7f27371669dc72d250614e80bdd47ca92d0|1461718087435276294:9de3e5eb9e3155565c2286189ad39b26ad23d49f\"; "
-        "auth_token=44617ac4620f46aaf710f20f1029e2ac16d7a385; guest_id_ads=v1%3A173816555393487176; "
-        "guest_id_marketing=v1%3A173816555393487176; guest_id=v1%3A173816555393487176; "
-        "twid=u%3D1881300024857939968; "
-        "ct0=f7e02be762b324ff384969a0e42ee941abeb43ed21e1bac41f24a8921b2dfec9af5b9bca61822e4939e6ab3eb65669ab5e391e6337030145266035d27ce105a60e3829496f8a5ab4ce8968a1570823e5"
-    ),    
+    "cookie":formated_cookies,    
     "host": "x.com",
     "referer": f"https://x.com/solana/status/{tweet_id}/retweets",
     "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
@@ -170,10 +163,10 @@ def fetch_all_retweeters(tweet_id,folder,logger):
     "sec-fetch-dest": "empty",
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-origin",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",# must be changed with acc change
-    "x-client-transaction-id":"CTlKf/WotIo3vRiLpvXDKeaDcCq+G5G9qKEdlgpdfJD5IyorJKlehKzB0Auhc+UvetjiQwrtd4HZWdHuJ4J124ct00itCg",# must be changed with acc change
-    "x-client-uuid":"f323a42e-2f76-407b-acb4-0bbce4b0497d",# must be changed with acc change
-    "x-csrf-token":"f7e02be762b324ff384969a0e42ee941abeb43ed21e1bac41f24a8921b2dfec9af5b9bca61822e4939e6ab3eb65669ab5e391e6337030145266035d27ce105a60e3829496f8a5ab4ce8968a1570823e5",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "x-client-transaction-id": x_client_transaction_id,
+    "x-client-uuid": x_client_uuid,
+    "x-csrf-token": x_csrf_token,
     "x-twitter-active-user": "yes",
     "x-twitter-auth-type": "OAuth2Session",
     "x-twitter-client-language": "en"
@@ -488,7 +481,19 @@ def process_retweeters(tweet_id, username, headers,logger):
     folder = username or tweet_id
     os.makedirs(folder, exist_ok=True)
     
-    retweeters = fetch_all_retweeters(tweet_id, folder,logger)
+    while True:
+        processed_accounts = accs_fetcher()
+        random_acc=random.choice(processed_accounts)
+        x_csrf_token = random_acc['headers']['x-csrf-token']
+        x_client_uuid = random_acc['headers']['x-client-uuid']
+        x_client_transaction_id = random_acc['headers']['x-client-transaction-id']
+        formated_cookies = random_acc['formatted_cookies']
+        if tester(formated_cookies, x_csrf_token, x_client_uuid, x_client_transaction_id) == 200 :
+            break
+        else:
+            logger.info('acc not logged in any more use another one')
+
+    retweeters = fetch_all_retweeters(tweet_id, folder,logger,formated_cookies,x_csrf_token,x_client_uuid,x_client_transaction_id)
     
     files = [os.path.join(folder, f) for f in os.listdir(folder) if f.startswith('tweet') and f.endswith('.csv')]
     
@@ -563,4 +568,126 @@ def combine_all_data(folder, username_or_tweet_id):
             return None
     return None
 
+def accs_fetcher():
+    def process_account(account):
+        """
+        Process a single account and format its information including cookies and headers
+        """
+        account_info = {
+            "username": account.get("username"),
+            "password": account.get("password"),
+            "email": account.get("email"),
+            "secondary_password": account.get("secondary_password"),
+            "token": account.get("token"),
+            "headers": account.get("headers", {}),
+            "formatted_cookies": format_cookies_for_header(account.get("cookies", []))
+        }
+        return account_info
 
+    def format_cookies_for_header(cookies):
+        """
+        Format cookies list into a header-compatible string, filtering for x.com domain only
+        """
+        cookie_pairs = []
+        for cookie in cookies:
+            # Check if the domain contains 'x.com'
+            domain = cookie.get('domain', '').lower()
+            if 'x.com' in domain or "twitter.com" in domain:
+                cookie_pairs.append(f"{cookie['name']}={cookie['value']}")
+        return "; ".join(cookie_pairs)
+
+    def extract_accounts_info(json_file_path):
+        """
+        Securely extract and process account information from Render's Secret File
+        """
+        secret_path = os.getenv('ACCOUNTS_SECRET_PATH', '/etc/secrets/twitter_accounts.json')
+        with open(secret_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+
+        # Process each account
+        processed_accounts = []
+        for account in data.get("accounts", []):
+            processed_account = process_account(account)
+            processed_accounts.append(processed_account)
+        return processed_accounts
+
+    processed_accounts = extract_accounts_info("twitter_accounts.json")
+    return processed_accounts
+
+
+def tester(formated_cookies, x_csrf_token, x_client_uuid, x_client_transaction_id):
+    BASE_URL = "https://x.com/i/api/graphql"
+    ENDPOINT = "8fXdisbSK0JGESmFrHcp1g/Retweeters"
+    variables = {
+        "tweetId": "1882807731993870784",
+        "count": 5,
+        "includePromotedContent": True
+    }
+
+    features = {
+        "profile_label_improvements_pcf_label_in_post_enabled": True,
+        "rweb_tipjar_consumption_enabled": True,
+        "responsive_web_graphql_exclude_directive_enabled": True,
+        "verified_phone_label_enabled": False,
+        "creator_subscriptions_tweet_preview_api_enabled": True,
+        "responsive_web_graphql_timeline_navigation_enabled": True,
+        "responsive_web_graphql_skip_user_profile_image_extensions_enabled": False,
+        "premium_content_api_read_enabled": False,
+        "communities_web_enable_tweet_community_results_fetch": True,
+        "c9s_tweet_anatomy_moderator_badge_enabled": True,
+        "responsive_web_grok_analyze_button_fetch_trends_enabled": False,
+        "responsive_web_grok_analyze_post_followups_enabled": True,
+        "responsive_web_jetfuel_frame": False,
+        "responsive_web_grok_share_attachment_enabled": True,
+        "articles_preview_enabled": True,
+        "responsive_web_edit_tweet_api_enabled": True,
+        "graphql_is_translatable_rweb_tweet_is_translatable_enabled": True,
+        "view_counts_everywhere_api_enabled": True,
+        "longform_notetweets_consumption_enabled": True,
+        "responsive_web_twitter_article_tweet_consumption_enabled": True,
+        "tweet_awards_web_tipping_enabled": False,
+        "creator_subscriptions_quote_tweet_preview_enabled": False,
+        "freedom_of_speech_not_reach_fetch_enabled": True,
+        "standardized_nudges_misinfo": True,
+        "tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled": True,
+        "rweb_video_timestamps_enabled": True,
+        "longform_notetweets_rich_text_read_enabled": True,
+        "longform_notetweets_inline_media_enabled": True,
+        "responsive_web_grok_image_annotation_enabled": True,
+        "responsive_web_enhance_cards_enabled": False
+    }
+
+    encoded_variables = urllib.parse.urlencode(
+        {"variables": json.dumps(variables)})
+    encoded_features = urllib.parse.urlencode(
+        {"features": json.dumps(features)})
+
+    url = f"{BASE_URL}/{ENDPOINT}?{encoded_variables}&{encoded_features}"
+
+    headers = {
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "cookie": formated_cookies,
+        "host": "x.com",
+        "referer": "https://x.com/solana/status/1882807731993870784/retweets",
+        "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "x-client-transaction-id": x_client_transaction_id,
+        "x-client-uuid": x_client_uuid,
+        "x-csrf-token": x_csrf_token,
+        "x-twitter-active-user": "yes",
+        "x-twitter-auth-type": "OAuth2Session",
+        "x-twitter-client-language": "en"
+    }
+
+    response = requests.get(url, headers=headers)
+    return response.status_code
