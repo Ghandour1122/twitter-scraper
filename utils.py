@@ -488,6 +488,7 @@ def process_retweeters(tweet_id, username, headers,logger):
         x_client_uuid = random_acc['headers']['x-client-uuid']
         x_client_transaction_id = random_acc['headers']['x-client-transaction-id']
         formated_cookies = random_acc['formatted_cookies']
+        logger.info(f"acc usernmae {random_acc['username']}")
         if tester(formated_cookies, x_csrf_token, x_client_uuid, x_client_transaction_id) == 200 :
             break
         else:
@@ -596,7 +597,7 @@ def accs_fetcher():
                 cookie_pairs.append(f"{cookie['name']}={cookie['value']}")
         return "; ".join(cookie_pairs)
 
-    def extract_accounts_info(json_file_path):
+    def extract_accounts_info():
         """
         Securely extract and process account information from Render's Secret File
         """
@@ -611,7 +612,7 @@ def accs_fetcher():
             processed_accounts.append(processed_account)
         return processed_accounts
 
-    processed_accounts = extract_accounts_info("twitter_accounts.json")
+    processed_accounts = extract_accounts_info()
     return processed_accounts
 
 
